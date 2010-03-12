@@ -9,33 +9,49 @@ using Rhino.Mocks.Exceptions;
 
 namespace RhinoMocksExamples
 {
-    // Here are some tests that will show what how stubs, mocks, and
-    // partial mocks work in Rhino Mocks.
+    // Here are some tests that will show what how to do everything
+    // you would want to do with Rhino Mocks.  You can also read the 
+    // documentation (which is pretty good) here:
+    // http://ayende.com/Wiki/Rhino+Mocks+3.5.ashx
+
+    // The Rhino Mocks syntax has changed drastically over the years,
+    // definitely for the good.  You may find old blog posts out there
+    // showing how to do it the old way.  Just ignore them and be 
+    // glad that you didn't have to do it the old way.
+    
+    // Let's create some sample classes that we'll work with.
+
+    public interface ISampleClass
+    {
+        string Property { get; set; }
+        void VoidMethod();
+        int MethodThatReturnsInteger(string s);
+        object MethodThatReturnsObject(int i);
+        void MethodWithOutParameter(out int i);
+        void MethodWithRefParameter(ref string i);
+
+        event EventHandler SomeEvent;
+    }
+
+    // Time for tests.
 
     public class When_working_with_a_stub_of_an_interface : SpecBase
     {
-        public interface ISampleClass
-        {
-            string Property { get; set; }
-            void VoidMethod();
-            int MethodThatReturnsInteger(string s);
-            object MethodThatReturnsObject(int i);
-            void MethodWithOutParameter(out int i);
-            void MethodWithRefParameter(ref string i);
-
-            event EventHandler SomeEvent;
-        }
+        // "stub" == "fake"
 
         [Test]
         public void You_can_create_a_stub_by_calling_MockRepository_GenerateStub()
         {
             // This is the out-of-the-box way to create a stub in Rhino Mocks.
+            // Rhino Mocks will dynamically create a class that implements 
+            // ISampleClass.
             var stub = MockRepository.GenerateStub<ISampleClass>();
         }
 
         [Test]
         public void NBehave_gives_us_a_shorthand_way_of_creating_stubs()
         {
+            // Less typing.  
             var stub = CreateStub<ISampleClass>();
         }
 
@@ -235,123 +251,76 @@ namespace RhinoMocksExamples
             argsPerCall[1][0].ShouldEqual("bar");
         }
 
-        //[Test]
-        //public void If_you_set_a_property_the_getter_will_return_the_value()
-        //{
-        //    _stub.Property = "foo";
-        //    _stub.Property.ShouldEqual("foo");
-        //}
+        [Test]
+        public void If_you_set_a_property_the_getter_will_return_the_value()
+        {
+            var stub = CreateStub<ISampleClass>();
+
+            stub.Property = "foo";
+            stub.Property.ShouldEqual("foo");
+        }
+
+        [Test]
+        public void You_cannot_use_AssertWasCalled_with_properties_on_a_stub()
+        {
+            // But why would you need to?  You can just get the value 
+            // directly from the property.
+            var stub = CreateStub<ISampleClass>();
+
+            stub.Property = "foo";
+
+            // Don't do this
+            //stub.AssertWasCalled(s => s.Property);
+
+            // Just do this
+            stub.Property.ShouldEqual("foo");
+        }
     }
 
-    //public class When_working_with_a_mock_of_an_interface : SpecBase
-    //{
-    //    private ISampleClass _stub;
+    public class When_working_with_a_mock_of_an_interface : SpecBase
+    {
+        // You can do pretty much everything with stubs.  I don't see a reason
+        // to ever use mocks.  If you want to know the technical academic difference
+        // between a mock and a stub, you can read about it here:
+        // http://martinfowler.com/articles/mocksArentStubs.html
+        //
+        // Personally I think it's all semantics and that it doesn't really matter.
+        // I'd recommend just using stubs with Rhino Mocks.  But if you really care,
+        // here are the things that are different with mocks.
 
-    //    public interface ISampleClass
-    //    {
-    //        string Property { get; set; }
-    //        void VoidMethod();
-    //        int IntegerMethod(string s);
-    //        object ObjectMethod(int i);
-    //    }
+        [Test]
+        public void You_can_create_a_stub_by_calling_MockRepository_GenerateMock()
+        {
+            var mock = MockRepository.GenerateMock<ISampleClass>();
+        }
 
-    //    protected override void Establish_context()
-    //    {
-    //        base.Establish_context();
+        [Test]
+        public void NBehave_gives_us_a_shorthand_way_of_creating_mocks()
+        {
+            // Less typing.  
+            var mock = CreateDependency<ISampleClass>();
+        }
 
-    //        _stub = CreateDependency<ISampleClass>();
-    //    }
+        [Test]
+        public void You_can_check_to_see_if_a_property_was_set()
+        {
+            var mock = CreateDependency<ISampleClass>();
 
-    //    [Test]
-    //    public void Calling_void_methods_will_do_nothing()
-    //    {
-    //        _stub.VoidMethod();
-    //    }
+            mock.Property = "foo";
 
-    //    [Test]
-    //    public void Calling_methods_that_return_value_types_will_return_the_default_value_for_that_type()
-    //    {
-    //        _stub.IntegerMethod("foo").ShouldEqual(0);
-    //    }
+            mock.AssertWasCalled(s => s.Property = "foo");
+        }
 
-    //    [Test]
-    //    public void Calling_methods_that_return_reference_types_will_return_null()
-    //    {
-    //        _stub.ObjectMethod(1).ShouldBeNull();
-    //    }
+        [Test]
+        public void You_can_check_to_see_if_a_property_getter_was_called()
+        {
+            var mock = CreateDependency<ISampleClass>();
 
-    //    [Test]
-    //    public void You_can_tell_the_mock_what_value_to_return_for_a_method()
-    //    {
-    //        // calling the method with "foo" as the parameter will return 5
-    //        _stub.Stub(s => s.IntegerMethod("foo")).Return(5);
+            var value = mock.Property;
 
-    //        // calling the method with any other parameter will return 10
-    //        _stub.Stub(s => s.IntegerMethod(null)).IgnoreArguments().Return(10);
-
-    //        _stub.IntegerMethod("foo").ShouldEqual(5);
-    //        _stub.IntegerMethod("iojaewfj").ShouldEqual(10);
-    //        _stub.IntegerMethod(null).ShouldEqual(10);
-    //    }
-
-    //    [Test]
-    //    public void You_can_tell_the_mock_to_throw_an_exception_when_a_method_is_called()
-    //    {
-    //        // calling the method with "foo" as the parameter will throw exception
-    //        _stub.Stub(s => s.IntegerMethod("foo")).Throw(new InvalidOperationException());
-
-    //        // calling the method with any other parameter will return 10
-    //        _stub.Stub(s => s.IntegerMethod(null)).IgnoreArguments().Return(10);
-
-    //        typeof(InvalidOperationException).ShouldBeThrownBy(
-    //            () => _stub.IntegerMethod("foo").ShouldEqual(5));
-
-    //        _stub.IntegerMethod("iojaewfj").ShouldEqual(10);
-    //        _stub.IntegerMethod(null).ShouldEqual(10);
-    //    }
-
-    //    [Test]
-    //    public void You_can_check_to_see_if_a_method_was_called()
-    //    {
-    //        _stub.IntegerMethod("foo");
-
-    //        _stub.AssertWasCalled(s => s.IntegerMethod("foo"));
-    //        _stub.AssertWasCalled(s => s.IntegerMethod(null), o => o.IgnoreArguments());
-    //        _stub.AssertWasCalled(s => s.IntegerMethod("foo"), o => o.Repeat.Once());
-    //    }
-
-    //    [Test]
-    //    public void You_can_check_to_see_if_a_method_was_not_called()
-    //    {
-    //        _stub.IntegerMethod("foo");
-
-    //        _stub.AssertWasNotCalled(s => s.IntegerMethod("asdfdsf"));
-    //        _stub.AssertWasNotCalled(s => s.VoidMethod(), o => o.IgnoreArguments());
-    //    }
-
-    //    [Test]
-    //    public void You_can_get_the_arguments_of_calls_to_a_method()
-    //    {
-    //        _stub.IntegerMethod("foo");
-
-    //        IList<object[]> argsPerCall = _stub.GetArgumentsForCallsMadeOn(s => s.IntegerMethod(null));
-    //        argsPerCall[0][0].ShouldEqual("foo");
-    //    }
-
-    //    [Test]
-    //    public void You_have_to_stub_the_properties_if_you_want_it_to_return_a_value()
-    //    {
-    //        _stub.Stub(s => s.Property).Return("foo");
-    //        _stub.Property.ShouldEqual("foo");
-    //    }
-
-    //    [Test]
-    //    public void If_you_set_a_property_it_will_NOT_return_the_value_that_you_set()
-    //    {
-    //        _stub.Property = "foo";
-    //        _stub.Property.ShouldBeNull();
-    //    }
-    //}
+            mock.AssertWasCalled(s => { var ignored = s.Property; });
+        }
+    }
 
     //public class When_working_with_a_mock_of_a_concrete_class : SpecBase
     //{
