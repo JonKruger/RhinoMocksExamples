@@ -1,7 +1,6 @@
 ﻿using NBehave.Spec.NUnit;
 using NUnit.Framework;
 using Rhino.Mocks;
-using Rhino.Mocks.Constraints;
 using System.Collections.Generic;
 using System;
 using Is = Rhino.Mocks.Constraints.Is;
@@ -275,6 +274,11 @@ namespace RhinoMocksExamples
             // now this will fail because we called it a second time
             typeof (ExpectationViolationException).ShouldBeThrownBy(
                 () => stub.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"), o => o.Repeat.Once()));
+
+            // some other options
+            stub.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"), o => o.Repeat.Times(2));
+            stub.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"), o => o.Repeat.AtLeastOnce());
+            stub.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"), o => o.Repeat.Twice()); 
         }
 
         [Test]
