@@ -65,6 +65,7 @@ namespace RhinoMocksExamples
         public bool NonVirtualMethodWasCalled { get; set; }
 
         public event EventHandler SomeEvent;
+        public virtual event EventHandler SomeVirtualEvent;
 
         public SampleClass()
         {
@@ -91,6 +92,12 @@ namespace RhinoMocksExamples
         {
             NonVirtualMethodWasCalled = true;
             return new List<int> { i };
+        }
+
+        public void FireSomeVirtualEvent()
+        {
+            if (SomeVirtualEvent != null)   
+                SomeVirtualEvent(this, EventArgs.Empty);
         }
     }
 
@@ -336,6 +343,21 @@ namespace RhinoMocksExamples
             // Just do this
             stub.Property.ShouldEqual("foo");
         }
+
+        [Test]
+        public void You_can_tell_events_on_a_stub_to_fire()
+        {
+            var stub = CreateStub<ISampleClass>();
+            var eventWasHandled = false;
+
+            // attach an event handler
+            stub.SomeEvent += (args, e) => eventWasHandled = true;
+
+            // raise the event
+            stub.Raise(s => s.SomeEvent += null, this, EventArgs.Empty);
+
+            eventWasHandled.ShouldBeTrue();
+        }
     }
 
     public class When_working_with_a_mock_of_an_interface : SpecBase
@@ -391,6 +413,8 @@ namespace RhinoMocksExamples
             var mockRepository = new MockRepository();
             var sampleClass = mockRepository.PartialMock<SampleClass>();
             sampleClass.Replay();
+
+            // There is currently no special NBehave way to create a partial mock.
         }
 
         [Test]
@@ -506,19 +530,6 @@ namespace RhinoMocksExamples
         }
 
         [Test]
-        public void You_cannot_get_the_arguments_of_calls_to_a_non_virtual_method()
-        {
-            var mockRepository = new MockRepository();
-            var sampleClass = mockRepository.PartialMock<SampleClass>();
-            sampleClass.Replay();
-
-            sampleClass.NonVirtualMethod(1);
-
-            typeof(Exception).ShouldBeThrownBy(
-                () => sampleClass.GetArgumentsForCallsMadeOn(s => s.NonVirtualMethod(0)));
-        }
-
-        [Test]
         public void You_can_get_the_arguments_of_calls_to_a_virtual_method()
         {
             var mockRepository = new MockRepository();
@@ -529,6 +540,19 @@ namespace RhinoMocksExamples
 
             IList<object[]> argsPerCall = sampleClass.GetArgumentsForCallsMadeOn(s => s.VirtualMethod("foo"));
             argsPerCall[0][0].ShouldEqual("foo");
+        }
+
+        [Test]
+        public void You_cannot_get_the_arguments_of_calls_to_a_non_virtual_method()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
+
+            sampleClass.NonVirtualMethod(1);
+
+            typeof(Exception).ShouldBeThrownBy(
+                () => sampleClass.GetArgumentsForCallsMadeOn(s => s.NonVirtualMethod(0)));
         }
 
         [Test]
@@ -551,6 +575,42 @@ namespace RhinoMocksExamples
 
             sampleClass.VirtualProperty = "foo";
             sampleClass.VirtualProperty.ShouldEqual("foo");
+        }
+
+        [Test]
+        public void You_can_tell_virtual_events_on_a_partial_mock_to_fire()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
+
+            var eventWasHandled = false;
+
+            // attach an event handler
+            sampleClass.SomeVirtualEvent += (args, e) => eventWasHandled = true;
+
+            // raise the event
+            sampleClass.Raise(s => s.SomeVirtualEvent += null, this, EventArgs.Empty);
+
+            eventWasHandled.ShouldBeTrue();
+        }
+
+        [Test]
+        public void Non_virtual_events_work_normally()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
+
+            var eventWasHandled = false;
+
+            // attach an event handler
+            sampleClass.SomeVirtualEvent += (args, e) => eventWasHandled = true;
+
+            // raise the event
+            sampleClass.FireSomeVirtualEvent();
+
+            eventWasHandled.ShouldBeTrue();
         }
     }
 }
