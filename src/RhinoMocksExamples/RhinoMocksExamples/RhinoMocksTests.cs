@@ -111,7 +111,7 @@ namespace RhinoMocksExamples
         {
             // This is the out-of-the-box way to create a stub in Rhino Mocks.
             // Rhino Mocks will dynamically create a class that implements 
-            // ISampleClass.
+            // ISampleClass and return it to you.
             var stub = MockRepository.GenerateStub<ISampleClass>();
         }
 
@@ -144,13 +144,6 @@ namespace RhinoMocksExamples
         }
 
         [Test]  
-        public void Handling_events_will_do_nothing()
-        {
-            var stub = CreateStub<ISampleClass>();
-            stub.SomeEvent += (args, e) => { };
-        }
-
-        [Test]
         public void You_can_tell_the_stub_what_value_to_return_when_is_method_is_called_with_specific_arguments()
         {
             var stub = CreateStub<ISampleClass>();
@@ -218,7 +211,7 @@ namespace RhinoMocksExamples
             // Here's how you stub an "ref" parameter.  The "Dummy" part is 
             // just to satisfy the compiler.  (Note: Is.Equal() is part of
             // the Rhino.Mocks.Contraints namespace, there is also an 
-            // Is.EqualTo() in NUnit... this is not what you want here.)
+            // Is.EqualTo() in NUnit... you want the Rhino Mocks one.)
             stub.Stub(s => s.MethodWithRefParameter(ref Arg<string>.Ref(Is.Equal("input"), "output").Dummy));
 
             // If you call the method with the specified input argument, it will
