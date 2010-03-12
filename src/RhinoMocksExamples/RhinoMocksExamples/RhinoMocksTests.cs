@@ -505,6 +505,43 @@ namespace RhinoMocksExamples
         }
 
         [Test]
+        public void You_can_use_WhenCalled_with_virtual_methods()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
+
+            sampleClass.Stub(s => s.VirtualMethod(Arg<string>.Is.Anything))
+                .Return(0) // you have to call Return() even though we're about to override it
+                .WhenCalled(method =>
+                                {
+                                    string param = (string) method.Arguments[0];
+                                    method.ReturnValue = int.Parse(param);
+                                });
+
+            sampleClass.VirtualMethod("3").ShouldEqual(3);
+            sampleClass.VirtualMethod("6").ShouldEqual(6);
+        }
+
+        [Test]
+        public void You_cannot_use_WhenCalled_with_non_virtual_methods()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
+
+            typeof (Exception).ShouldBeThrownBy(
+                () =>
+                sampleClass.Stub(s => s.NonVirtualMethod(Arg<int>.Is.Anything))
+                    .Return(null) // you have to call Return() even though we're about to override it
+                    .WhenCalled(method =>
+                                    {
+                                        int param = (int) method.Arguments[0];
+                                        method.ReturnValue = new[] {param, param + 1, param + 2};
+                                    }));
+        }
+
+        [Test]
         public void You_can_check_to_see_if_a_virtual_method_was_called()
         {
             var mockRepository = new MockRepository();
