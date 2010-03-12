@@ -33,6 +33,67 @@ namespace RhinoMocksExamples
         event EventHandler SomeEvent;
     }
 
+    public class SampleClass
+    {
+        private string _nonVirtualProperty;
+        public string NonVirtualProperty
+        {
+            get { return _nonVirtualProperty; }
+            set
+            {
+                _nonVirtualProperty = value;
+                NonVirtualPropertyWasSet = true;
+            }
+        }
+
+        private string _virtualProperty;
+        public virtual string VirtualProperty
+        {
+            get { return _virtualProperty; }
+            set
+            {
+                _virtualProperty = value;
+                VirtualPropertyWasSet = true;
+            }
+        }
+
+        public string SetByConstructor { get; private set; }
+        public bool NonVirtualPropertyWasSet { get; set; }
+        public bool VirtualPropertyWasSet { get; set; }
+        public bool VoidMethodWasCalled { get; set; }
+        public bool VirtualMethodWasCalled { get; set; }
+        public bool NonVirtualMethodWasCalled { get; set; }
+
+        public event EventHandler SomeEvent;
+
+        public SampleClass()
+        {
+            
+        }
+
+        public SampleClass(string value)
+        {
+            SetByConstructor = value;
+        }
+
+        public void VoidMethod()
+        {
+            VoidMethodWasCalled = true;
+        }
+
+        public virtual int VirtualMethod(string s)
+        {
+            VirtualMethodWasCalled = true;
+            return s.Length;
+        }
+
+        public IList<int> NonVirtualMethod(int i)
+        {
+            NonVirtualMethodWasCalled = true;
+            return new List<int> { i };
+        }
+    }
+
     // Time for tests.
 
     public class When_working_with_a_stub_of_an_interface : SpecBase
@@ -322,331 +383,174 @@ namespace RhinoMocksExamples
         }
     }
 
-    //public class When_working_with_a_mock_of_a_concrete_class : SpecBase
-    //{
-    //    private SampleClass _class;
+    public class When_working_with_a_partial_mock_of_a_concrete_class : SpecBase
+    {
+        [Test]
+        public void Here_is_how_you_create_a_partial_mock()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
+        }
 
-    //    public class SampleClass
-    //    {
-    //        private string _property;
-    //        public string Property
-    //        {
-    //            get { return _property; }
-    //            set
-    //            {
-    //                _property = value;
-    //                PropertyWasSet = true;
-    //            }
-    //        }
+        [Test]
+        public void You_can_pass_in_constuctor_arguments_and_Rhino_Mocks_will_pick_the_constructor_that_fits()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>("foo");
+            sampleClass.Replay();
 
-    //        private string _virtualProperty;
-    //        public string VirtualProperty
-    //        {
-    //            get { return _virtualProperty; }
-    //            set
-    //            {
-    //                _virtualProperty = value;
-    //                VirtualPropertyWasSet = true;
-    //            }
-    //        }
+            sampleClass.SetByConstructor.ShouldEqual("foo");
+        }
 
-    //        public bool PropertyWasSet { get; set; }
-    //        public bool VirtualPropertyWasSet { get; set; }
-    //        public bool VoidMethodWasCalled { get; set; }
-    //        public bool IntegerMethodWasCalled { get; set; }
-    //        public bool ObjectMethodWasCalled { get; set; }
+        [Test]
+        public void Calling_non_virtual_methods_will_call_the_actual_method()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
 
-    //        public void VoidMethod()
-    //        {
-    //            VoidMethodWasCalled = true;
-    //        }
+            sampleClass.VoidMethod();
+            sampleClass.VoidMethodWasCalled.ShouldBeTrue();
+        }
 
-    //        public virtual int IntegerMethod(string s)
-    //        {
-    //            IntegerMethodWasCalled = true;
-    //            return s.Length;
-    //        }
+        [Test]
+        public void Calling_virtual_methods_will_call_the_actual_method()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
 
-    //        public object ObjectMethod(int i)
-    //        {
-    //            ObjectMethodWasCalled = true;
-    //            return new List<int> { i };
-    //        }
-    //    }
+            sampleClass.VirtualMethod("foo").ShouldEqual(3);
+            sampleClass.VirtualMethodWasCalled.ShouldBeTrue();
+            sampleClass.AssertWasCalled(c => c.VirtualMethod("foo"));
+        }
 
-    //    protected override void Establish_context()
-    //    {
-    //        base.Establish_context();
+        [Test]
+        public void You_can_stub_a_virtual_method_and_give_it_a_return_value()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
 
-    //        _class = CreateDependency<SampleClass>();
-    //    }
+            sampleClass.Stub(c => c.VirtualMethod("foo")).Return(100);
 
-    //    [Test]
-    //    public void Calling_non_virtual_methods_will_call_the_actual_method()
-    //    {
-    //        _class.VoidMethod();
-    //        _class.VoidMethodWasCalled.ShouldBeTrue();
-    //    }
+            sampleClass.VirtualMethod("foo").ShouldEqual(100);
 
-    //    [Test]
-    //    public void Virtual_methods_are_stubbed_unless_you_give_it_a_value_to_return()
-    //    {
-    //        _class.IntegerMethod("foo").ShouldEqual(0);
-    //        _class.IntegerMethodWasCalled.ShouldBeFalse();
-    //        _class.AssertWasCalled(c => c.IntegerMethod("foo"));
-    //    }
+            // It's not actually going to run the real method since we stubbed it out.
+            sampleClass.VirtualMethodWasCalled.ShouldBeFalse();
 
-    //    [Test]
-    //    public void You_can_stub_a_virtual_method()
-    //    {
-    //        _class.Stub(c => c.IntegerMethod("foo")).Return(100);
+            sampleClass.AssertWasCalled(c => c.VirtualMethod("foo"));
+        }
 
-    //        _class.IntegerMethod("foo").ShouldEqual(100);
-    //    }
+        [Test]
+        public void You_can_have_virtual_methods_throw_an_exception_when_they_are_called()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
 
-    //    [Test]
-    //    public void You_can_have_virtual_methods_throw_an_exception_when_they_are_called()
-    //    {
-    //        _class.Stub(c => c.IntegerMethod("foo")).Throw(new InvalidOperationException());
+            sampleClass.Stub(c => c.VirtualMethod("foo")).Throw(new InvalidOperationException());
 
-    //        typeof(InvalidOperationException).ShouldBeThrownBy(
-    //            () => _class.IntegerMethod("foo"));
-    //    }
+            sampleClass.Replay();
 
-    //    [Test]
-    //    public void You_cannot_stub_a_non_virtual_method()
-    //    {
-    //        typeof(Exception).ShouldBeThrownBy(
-    //            () => _class.Stub(s => s.ObjectMethod(1)).Return("foo"));
-    //    }
+            typeof(InvalidOperationException).ShouldBeThrownBy(
+                () => sampleClass.VirtualMethod("foo"));
+        }
 
-    //    [Test]
-    //    public void You_can_check_to_see_if_a_virtual_method_was_called()
-    //    {
-    //        _class.IntegerMethod("foo");
+        [Test]
+        public void You_cannot_stub_a_non_virtual_method()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
 
-    //        _class.AssertWasCalled(s => s.IntegerMethod("foo"));
-    //        _class.AssertWasCalled(s => s.IntegerMethod(null), o => o.IgnoreArguments());
-    //        _class.AssertWasCalled(s => s.IntegerMethod("foo"), o => o.Repeat.Once());
-    //    }
+            typeof(Exception).ShouldBeThrownBy(
+                () => sampleClass.Stub(s => s.NonVirtualMethod(1)).Return(new List<int> { 3 }));
+        }
 
-    //    [Test]
-    //    public void You_cannot_use_AssertWasCalled_on_a_non_virtual_method()
-    //    {
-    //        _class.VoidMethod();
+        [Test]
+        public void You_can_check_to_see_if_a_virtual_method_was_called()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
 
-    //        typeof(Exception).ShouldBeThrownBy(
-    //            () => _class.AssertWasCalled(s => s.VoidMethod()));
-    //    }
+            sampleClass.VirtualMethod("foo");
 
-    //    [Test]
-    //    public void You_can_check_to_see_if_a_virtual_method_was_not_called()
-    //    {
-    //        _class.AssertWasNotCalled(s => s.IntegerMethod("foo"));
-    //        _class.AssertWasNotCalled(s => s.IntegerMethod(null), o => o.IgnoreArguments());
-    //    }
+            sampleClass.AssertWasCalled(s => s.VirtualMethod("foo"));
+            sampleClass.AssertWasCalled(s => s.VirtualMethod(Arg<string>.Is.Anything));
+            sampleClass.AssertWasCalled(s => s.VirtualMethod("foo"), o => o.Repeat.Once());
+        }
 
-    //    [Test]
-    //    public void You_cannot_use_AssertWasNotCalled_on_a_non_virtual_method()
-    //    {
-    //        typeof(Exception).ShouldBeThrownBy(
-    //            () => _class.AssertWasNotCalled(s => s.VoidMethod()));
-    //    }
+        [Test]
+        public void You_cannot_use_AssertWasCalled_on_a_non_virtual_method()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
 
-    //    [Test]
-    //    public void You_cannot_get_the_arguments_of_calls_to_a_non_virtual_method()
-    //    {
-    //        _class.ObjectMethod(1);
+            sampleClass.VoidMethod();
 
-    //        typeof(Exception).ShouldBeThrownBy(
-    //            () => _class.GetArgumentsForCallsMadeOn(s => s.ObjectMethod(0)));
-    //    }
+            typeof(Exception).ShouldBeThrownBy(
+                () => sampleClass.AssertWasCalled(s => s.VoidMethod()));
+        }
 
-    //    [Test]
-    //    public void You_can_get_the_arguments_of_calls_to_a_virtual_method()
-    //    {
-    //        _class.IntegerMethod("foo");
+        [Test]
+        public void You_cannot_use_AssertWasNotCalled_on_a_non_virtual_method()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
 
-    //        IList<object[]> argsPerCall = _class.GetArgumentsForCallsMadeOn(s => s.IntegerMethod("foo"));
-    //        argsPerCall[0][0].ShouldEqual("foo");
-    //    }
+            typeof (Exception).ShouldBeThrownBy(
+                () => sampleClass.AssertWasNotCalled(s => s.NonVirtualMethod(1)));
+        }
 
-    //    [Test]
-    //    public void Non_virtual_properties_work_as_normal()
-    //    {
-    //        _class.Property = "foo";
-    //        _class.Property.ShouldEqual("foo");
-    //    }
+        [Test]
+        public void You_cannot_get_the_arguments_of_calls_to_a_non_virtual_method()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
 
-    //    [Test]
-    //    public void Virtual_properties_work_as_normal()
-    //    {
-    //        _class.VirtualProperty = "foo";
-    //        _class.VirtualProperty.ShouldEqual("foo");
-    //    }
-    //}
+            sampleClass.NonVirtualMethod(1);
 
-    //public class When_working_with_a_partial_mock_of_a_concrete_class : SpecBase
-    //{
-    //    private SampleClass _class;
+            typeof(Exception).ShouldBeThrownBy(
+                () => sampleClass.GetArgumentsForCallsMadeOn(s => s.NonVirtualMethod(0)));
+        }
 
-    //    public class SampleClass
-    //    {
-    //        private string _property;
-    //        public string Property
-    //        {
-    //            get { return _property; }
-    //            set
-    //            {
-    //                _property = value;
-    //                PropertyWasSet = true;
-    //            }
-    //        }
+        [Test]
+        public void You_can_get_the_arguments_of_calls_to_a_virtual_method()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
 
-    //        private string _virtualProperty;
-    //        public string VirtualProperty
-    //        {
-    //            get { return _virtualProperty; }
-    //            set
-    //            {
-    //                _virtualProperty = value;
-    //                VirtualPropertyWasSet = true;
-    //            }
-    //        }
+            sampleClass.VirtualMethod("foo");
 
-    //        public bool PropertyWasSet { get; set; }
-    //        public bool VirtualPropertyWasSet { get; set; }
-    //        public bool VoidMethodWasCalled { get; set; }
-    //        public bool IntegerMethodWasCalled { get; set; }
-    //        public bool ObjectMethodWasCalled { get; set; }
+            IList<object[]> argsPerCall = sampleClass.GetArgumentsForCallsMadeOn(s => s.VirtualMethod("foo"));
+            argsPerCall[0][0].ShouldEqual("foo");
+        }
 
-    //        public void VoidMethod()
-    //        {
-    //            VoidMethodWasCalled = true;
-    //        }
+        [Test]
+        public void Non_virtual_properties_work_as_normal()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
 
-    //        public virtual int MethodThatReturnsInteger(string s)
-    //        {
-    //            IntegerMethodWasCalled = true;
-    //            return s.Length;
-    //        }
+            sampleClass.NonVirtualProperty = "foo";
+            sampleClass.NonVirtualProperty.ShouldEqual("foo");
+        }
 
-    //        public object MethodThatReturnsObject(int i)
-    //        {
-    //            ObjectMethodWasCalled = true;
-    //            return new List<int> { i };
-    //        }
-    //    }
+        [Test]
+        public void Virtual_properties_work_as_normal()
+        {
+            var mockRepository = new MockRepository();
+            var sampleClass = mockRepository.PartialMock<SampleClass>();
+            sampleClass.Replay();
 
-    //    protected override void Establish_context()
-    //    {
-    //        base.Establish_context();
-
-    //        _class = CreatePartialMock<SampleClass>();
-    //    }
-
-    //    [Test]
-    //    public void Calling_non_virtual_methods_will_call_the_actual_method()
-    //    {
-    //        _class.VoidMethod();
-    //        _class.VoidMethodWasCalled.ShouldBeTrue();
-    //    }
-
-    //    [Test]
-    //    public void Calling_virtual_methods_will_call_the_actual_method()
-    //    {
-    //        _class.MethodThatReturnsInteger("foo").ShouldEqual(3);
-    //        _class.IntegerMethodWasCalled.ShouldBeTrue();
-    //        _class.AssertWasCalled(c => c.MethodThatReturnsInteger("foo"));
-    //    }
-
-    //    [Test]
-    //    public void You_can_stub_a_virtual_method()
-    //    {
-    //        _class.Stub(c => c.MethodThatReturnsInteger("foo")).Return(100);
-
-    //        _class.MethodThatReturnsInteger("foo").ShouldEqual(100);
-    //        _class.AssertWasCalled(c => c.MethodThatReturnsInteger("foo"));
-    //    }
-
-    //    [Test]
-    //    public void You_can_have_virtual_methods_throw_an_exception_when_they_are_called()
-    //    {
-    //        _class.Stub(c => c.MethodThatReturnsInteger("foo")).Throw(new InvalidOperationException());
-
-    //        typeof(InvalidOperationException).ShouldBeThrownBy(
-    //            () => _class.MethodThatReturnsInteger("foo"));
-    //    }
-    //    [Test]
-    //    public void You_cannot_stub_a_non_virtual_method()
-    //    {
-    //        typeof(Exception).ShouldBeThrownBy(
-    //            () => _class.Stub(s => s.MethodThatReturnsObject(1)).Return("foo"));
-    //    }
-
-    //    [Test]
-    //    public void You_can_check_to_see_if_a_virtual_method_was_called()
-    //    {
-    //        _class.MethodThatReturnsInteger("foo");
-
-    //        _class.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"));
-    //        _class.AssertWasCalled(s => s.MethodThatReturnsInteger(null), o => o.IgnoreArguments());
-    //        _class.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"), o => o.Repeat.Once());
-    //    }
-
-    //    [Test]
-    //    public void You_cannot_use_AssertWasCalled_on_a_non_virtual_method()
-    //    {
-    //        _class.VoidMethod();
-
-    //        typeof(Exception).ShouldBeThrownBy(
-    //            () => _class.AssertWasCalled(s => s.VoidMethod()));
-    //    }
-
-    //    [Test]
-    //    public void You_can_check_to_see_if_a_non_virtual_method_was_not_called()
-    //    {
-    //        _class.AssertWasNotCalled(s => s.MethodThatReturnsInteger("foo"));
-    //        _class.AssertWasNotCalled(s => s.MethodThatReturnsInteger(null), o => o.IgnoreArguments());
-    //    }
-
-    //    [Test]
-    //    public void You_cannot_use_AssertWasNotCalled_on_a_non_virtual_method()
-    //    {
-    //        typeof(Exception).ShouldBeThrownBy(
-    //            () => _class.AssertWasNotCalled(s => s.VoidMethod()));
-    //    }
-
-    //    [Test]
-    //    public void You_cannot_get_the_arguments_of_calls_to_a_non_virtual_method()
-    //    {
-    //        _class.MethodThatReturnsObject(1);
-
-    //        typeof(Exception).ShouldBeThrownBy(
-    //            () => _class.GetArgumentsForCallsMadeOn(s => s.MethodThatReturnsObject(0)));
-    //    }
-
-    //    [Test]
-    //    public void You_can_get_the_arguments_of_calls_to_a_virtual_method()
-    //    {
-    //        _class.MethodThatReturnsInteger("foo");
-
-    //        IList<object[]> argsPerCall = _class.GetArgumentsForCallsMadeOn(s => s.MethodThatReturnsInteger("foo"));
-    //        argsPerCall[0][0].ShouldEqual("foo");
-    //    }
-
-    //    [Test]
-    //    public void Non_virtual_properties_work_as_normal()
-    //    {
-    //        _class.Property = "foo";
-    //        _class.Property.ShouldEqual("foo");
-    //    }
-
-    //    [Test]
-    //    public void Virtual_properties_work_as_normal()
-    //    {
-    //        _class.VirtualProperty = "foo";
-    //        _class.VirtualProperty.ShouldEqual("foo");
-    //    }
-    //}
+            sampleClass.VirtualProperty = "foo";
+            sampleClass.VirtualProperty.ShouldEqual("foo");
+        }
+    }
 }
