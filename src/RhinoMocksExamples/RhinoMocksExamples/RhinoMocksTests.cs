@@ -355,6 +355,22 @@ namespace RhinoMocksExamples
 
             eventWasHandled.ShouldBeTrue();
         }
+
+        [Test]
+        public void You_can_do_arbitrary_stuff_when_a_method_is_called()
+        {
+            var stub = CreateStub<ISampleClass>();
+            stub.Stub(s => s.MethodThatReturnsInteger(Arg<string>.Is.Anything))
+                .Return(0) // you have to call Return() even though we're about to override it
+                .WhenCalled(method =>
+                                {
+                                    string param = (string) method.Arguments[0];
+                                    method.ReturnValue = int.Parse(param);
+                                });
+
+            stub.MethodThatReturnsInteger("3").ShouldEqual(3);
+            stub.MethodThatReturnsInteger("6").ShouldEqual(6);
+        }
     }
 
     public class When_working_with_a_mock_of_an_interface : SpecBase
