@@ -275,21 +275,6 @@ namespace RhinoMocksExamples
         }
 
         [Test]
-        public void Another_way_to_verify_expectations_instead_of_AssertWasCalled()
-        {
-            var stub = CreateStub<ISampleClass>();
-
-            // Here I'm setting up an expectation that a method will be called
-            stub.Expect(s => s.MethodThatReturnsInteger("foo")).Return(5);
-
-            var output = stub.MethodThatReturnsInteger("foo");
-            output.ShouldEqual(5);
-
-            // ... and now I'm verifying that the method was called
-            stub.VerifyAllExpectations();
-        }
-
-        [Test]
         public void You_can_check_to_see_if_a_method_was_not_called()
         {
             var stub = CreateStub<ISampleClass>();
@@ -415,6 +400,21 @@ namespace RhinoMocksExamples
             var value = mock.Property;
 
             mock.AssertWasCalled(s => { var ignored = s.Property; });
+        }
+
+        [Test]
+        public void Another_way_to_verify_expectations_instead_of_AssertWasCalled()
+        {
+            var stub = CreateDependency<ISampleClass>();
+
+            // Here I'm setting up an expectation that a method will be called
+            stub.Expect(s => s.MethodThatReturnsInteger("foo")).Return(5);
+
+            var output = stub.MethodThatReturnsInteger("foo");
+            output.ShouldEqual(5);
+
+            // ... and now I'm verifying that the method was called
+            stub.VerifyAllExpectations();
         }
     }
 
