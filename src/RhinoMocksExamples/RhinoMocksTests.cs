@@ -1,10 +1,11 @@
-﻿using NBehave.Spec.NUnit;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using Rhino.Mocks;
 using System.Collections.Generic;
 using System;
+using Should.Extensions.AssertExtensions;
 using Is = Rhino.Mocks.Constraints.Is;
 using Rhino.Mocks.Exceptions;
+using Assert = NUnit.Framework.Assert;
 
 namespace RhinoMocksExamples
 {
@@ -17,8 +18,10 @@ namespace RhinoMocksExamples
     // definitely for the good.  You may find old blog posts out there
     // showing how to do it the old way.  Just ignore them and be 
     // glad that you didn't have to do it the old way.
-    
+
     // Let's create some sample classes that we'll work with.
+
+    #region sample classes
 
     public interface ISampleClass
     {
@@ -68,7 +71,7 @@ namespace RhinoMocksExamples
 
         public SampleClass()
         {
-            
+
         }
 
         public SampleClass(string value)
@@ -95,14 +98,16 @@ namespace RhinoMocksExamples
 
         public void FireSomeVirtualEvent()
         {
-            if (SomeVirtualEvent != null)   
+            if (SomeVirtualEvent != null)
                 SomeVirtualEvent(this, EventArgs.Empty);
         }
     }
 
+    #endregion
+
     // Time for tests.
 
-    public class When_working_with_a_stub_of_an_interface : SpecBase
+    public class When_working_with_a_stub_of_an_interface
     {
         // "stub" == "fake"
 
@@ -116,38 +121,31 @@ namespace RhinoMocksExamples
         }
 
         [Test]
-        public void NBehave_gives_us_a_shorthand_way_of_creating_stubs()
-        {
-            // Less typing.  
-            var stub = CreateStub<ISampleClass>();
-        }
-
-        [Test]
         public void Calling_void_methods_will_do_nothing()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
             stub.VoidMethod();
         }
 
         [Test]
         public void Calling_methods_that_return_value_types_will_return_the_default_value_for_that_type()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
             stub.MethodThatReturnsInteger("foo").ShouldEqual(0);
         }
 
         [Test]
         public void Calling_methods_that_return_reference_types_will_return_null()
         {
-            var stub = CreateStub<ISampleClass>(); 
+            var stub = MockRepository.GenerateStub<ISampleClass>();
             stub.MethodThatReturnsObject(1).ShouldBeNull();
         }
 
-        [Test]  
+        [Test]
         public void You_can_tell_the_stub_what_value_to_return_when_is_method_is_called_with_specific_arguments()
         {
-            var stub = CreateStub<ISampleClass>();
-            
+            var stub = MockRepository.GenerateStub<ISampleClass>();
+
             stub.Stub(s => s.MethodThatReturnsInteger("foo")).Return(5);
 
             // calling the method with "foo" as the parameter will return 5
@@ -161,7 +159,7 @@ namespace RhinoMocksExamples
         [Test]
         public void You_can_tell_the_stub_what_value_to_return_when_is_method_is_called_with_any_argument()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
 
             stub.Stub(s => s.MethodThatReturnsInteger(Arg<string>.Is.Anything)).Return(5);
 
@@ -174,7 +172,7 @@ namespace RhinoMocksExamples
         [Test]
         public void You_can_get_fancy_with_parameters_in_stubs()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
 
             // Arg<>.Matches() allows us to specify a lambda expression that specifies
             // whether the return value should be used in this case.  Here we're saying
@@ -192,7 +190,7 @@ namespace RhinoMocksExamples
         [Test]
         public void Handling_out_parameters_in_stubs()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
 
             // Here's how you stub an "out" parameter.  The "Dummy" part is 
             // just to satisfy the compiler.
@@ -206,7 +204,7 @@ namespace RhinoMocksExamples
         [Test]
         public void Handling_ref_parameters_in_stubs()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
 
             // Here's how you stub an "ref" parameter.  The "Dummy" part is 
             // just to satisfy the compiler.  (Note: Is.Equal() is part of
@@ -230,20 +228,19 @@ namespace RhinoMocksExamples
         [Test]
         public void You_can_tell_the_stub_to_throw_an_exception_when_a_method_is_called()
         {
-            var stub = CreateStub<ISampleClass>();
-            
+            var stub = MockRepository.GenerateStub<ISampleClass>();
+
             // calling the method with "foo" as the parameter will throw exception
             stub.Stub(s => s.MethodThatReturnsInteger("foo")).Throw(new InvalidOperationException());
 
-            typeof(InvalidOperationException).ShouldBeThrownBy(
-                () => stub.MethodThatReturnsInteger("foo"));
+            Assert.Throws<InvalidOperationException>(() => stub.MethodThatReturnsInteger("foo"));
         }
 
         [Test]
         public void You_can_check_to_see_if_a_method_was_called()
         {
-            var stub = CreateStub<ISampleClass>();
-            
+            var stub = MockRepository.GenerateStub<ISampleClass>();
+
             stub.MethodThatReturnsInteger("foo");
 
             stub.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"));
@@ -253,7 +250,7 @@ namespace RhinoMocksExamples
         [Test]
         public void You_can_check_to_see_if_a_method_was_called_a_certain_number_of_times()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
 
             stub.MethodThatReturnsInteger("foo");
             stub.MethodThatReturnsInteger("bar");
@@ -265,19 +262,19 @@ namespace RhinoMocksExamples
             stub.MethodThatReturnsInteger("foo");
 
             // now this will fail because we called it a second time
-            typeof (ExpectationViolationException).ShouldBeThrownBy(
+            Assert.Throws<ExpectationViolationException>(
                 () => stub.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"), o => o.Repeat.Once()));
 
             // some other options
             stub.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"), o => o.Repeat.Times(2));
             stub.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"), o => o.Repeat.AtLeastOnce());
-            stub.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"), o => o.Repeat.Twice()); 
+            stub.AssertWasCalled(s => s.MethodThatReturnsInteger("foo"), o => o.Repeat.Twice());
         }
 
         [Test]
         public void You_can_check_to_see_if_a_method_was_not_called()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
 
             stub.MethodThatReturnsInteger("foo");
 
@@ -289,7 +286,7 @@ namespace RhinoMocksExamples
         [Test]
         public void You_can_get_the_arguments_of_calls_to_a_method()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
 
             stub.MethodThatReturnsInteger("foo");
             stub.MethodThatReturnsInteger("bar");
@@ -304,7 +301,7 @@ namespace RhinoMocksExamples
         [Test]
         public void If_you_set_a_property_the_getter_will_return_the_value()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
 
             stub.Property = "foo";
             stub.Property.ShouldEqual("foo");
@@ -315,7 +312,7 @@ namespace RhinoMocksExamples
         {
             // But why would you need to?  You can just get the value 
             // directly from the property.
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
 
             stub.Property = "foo";
 
@@ -329,7 +326,7 @@ namespace RhinoMocksExamples
         [Test]
         public void You_can_tell_events_on_a_stub_to_fire()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
             var eventWasHandled = false;
 
             // attach an event handler
@@ -344,12 +341,12 @@ namespace RhinoMocksExamples
         [Test]
         public void You_can_do_arbitrary_stuff_when_a_method_is_called()
         {
-            var stub = CreateStub<ISampleClass>();
+            var stub = MockRepository.GenerateStub<ISampleClass>();
             stub.Stub(s => s.MethodThatReturnsInteger(Arg<string>.Is.Anything))
                 .Return(0) // you have to call Return() even though we're about to override it
                 .WhenCalled(method =>
                                 {
-                                    string param = (string) method.Arguments[0];
+                                    string param = (string)method.Arguments[0];
                                     method.ReturnValue = int.Parse(param);
                                 });
 
@@ -358,7 +355,7 @@ namespace RhinoMocksExamples
         }
     }
 
-    public class When_working_with_a_mock_of_an_interface : SpecBase
+    public class When_working_with_a_mock_of_an_interface
     {
         // You can do pretty much everything with stubs.  I don't see a reason
         // to ever use mocks.  If you want to know the technical academic difference
@@ -376,16 +373,9 @@ namespace RhinoMocksExamples
         }
 
         [Test]
-        public void NBehave_gives_us_a_shorthand_way_of_creating_mocks()
-        {
-            // Less typing.  
-            var mock = CreateDependency<ISampleClass>();
-        }
-
-        [Test]
         public void You_can_check_to_see_if_a_property_was_set()
         {
-            var mock = CreateDependency<ISampleClass>();
+            var mock = MockRepository.GenerateMock<ISampleClass>();
 
             mock.Property = "foo";
 
@@ -395,7 +385,7 @@ namespace RhinoMocksExamples
         [Test]
         public void You_can_check_to_see_if_a_property_getter_was_called()
         {
-            var mock = CreateDependency<ISampleClass>();
+            var mock = MockRepository.GenerateMock<ISampleClass>();
 
             var value = mock.Property;
 
@@ -405,7 +395,7 @@ namespace RhinoMocksExamples
         [Test]
         public void Another_way_to_verify_expectations_instead_of_AssertWasCalled()
         {
-            var stub = CreateDependency<ISampleClass>();
+            var stub = MockRepository.GenerateMock<ISampleClass>();
 
             // Here I'm setting up an expectation that a method will be called
             stub.Expect(s => s.MethodThatReturnsInteger("foo")).Return(5);
@@ -418,16 +408,17 @@ namespace RhinoMocksExamples
         }
     }
 
-    public class When_working_with_a_partial_mock_of_a_concrete_class : SpecBase
+    public class When_working_with_a_partial_mock_of_a_concrete_class
     {
         [Test]
         public void Here_is_how_you_create_a_partial_mock()
         {
             var mockRepository = new MockRepository();
             var sampleClass = mockRepository.PartialMock<SampleClass>();
-            sampleClass.Replay();
 
-            // There is currently no special NBehave way to create a partial mock.
+            // You have to call Replay() when you're done setting up the partial mock
+            // and you want to make actual calls to methods on the partial mock.
+            sampleClass.Replay();
         }
 
         [Test]
@@ -490,7 +481,7 @@ namespace RhinoMocksExamples
 
             sampleClass.Replay();
 
-            typeof(InvalidOperationException).ShouldBeThrownBy(
+            Assert.Throws<InvalidOperationException>(
                 () => sampleClass.VirtualMethod("foo"));
         }
 
@@ -500,7 +491,7 @@ namespace RhinoMocksExamples
             var mockRepository = new MockRepository();
             var sampleClass = mockRepository.PartialMock<SampleClass>();
 
-            typeof(Exception).ShouldBeThrownBy(
+            Assert.Throws<InvalidOperationException>(
                 () => sampleClass.Stub(s => s.NonVirtualMethod(1)).Return(new List<int> { 3 }));
         }
 
@@ -515,7 +506,7 @@ namespace RhinoMocksExamples
                 .Return(0) // you have to call Return() even though we're about to override it
                 .WhenCalled(method =>
                                 {
-                                    string param = (string) method.Arguments[0];
+                                    string param = (string)method.Arguments[0];
                                     method.ReturnValue = int.Parse(param);
                                 });
 
@@ -530,14 +521,14 @@ namespace RhinoMocksExamples
             var sampleClass = mockRepository.PartialMock<SampleClass>();
             sampleClass.Replay();
 
-            typeof (Exception).ShouldBeThrownBy(
+            Assert.Throws<InvalidOperationException>(
                 () =>
                 sampleClass.Stub(s => s.NonVirtualMethod(Arg<int>.Is.Anything))
                     .Return(null) // you have to call Return() even though we're about to override it
                     .WhenCalled(method =>
                                     {
-                                        int param = (int) method.Arguments[0];
-                                        method.ReturnValue = new[] {param, param + 1, param + 2};
+                                        int param = (int)method.Arguments[0];
+                                        method.ReturnValue = new[] { param, param + 1, param + 2 };
                                     }));
         }
 
@@ -564,7 +555,7 @@ namespace RhinoMocksExamples
 
             sampleClass.VoidMethod();
 
-            typeof(Exception).ShouldBeThrownBy(
+            Assert.Throws<InvalidOperationException>(
                 () => sampleClass.AssertWasCalled(s => s.VoidMethod()));
         }
 
@@ -575,7 +566,7 @@ namespace RhinoMocksExamples
             var sampleClass = mockRepository.PartialMock<SampleClass>();
             sampleClass.Replay();
 
-            typeof (Exception).ShouldBeThrownBy(
+            Assert.Throws<InvalidOperationException>(
                 () => sampleClass.AssertWasNotCalled(s => s.NonVirtualMethod(1)));
         }
 
@@ -601,7 +592,7 @@ namespace RhinoMocksExamples
 
             sampleClass.NonVirtualMethod(1);
 
-            typeof(Exception).ShouldBeThrownBy(
+            Assert.Throws<InvalidOperationException>(
                 () => sampleClass.GetArgumentsForCallsMadeOn(s => s.NonVirtualMethod(0)));
         }
 
