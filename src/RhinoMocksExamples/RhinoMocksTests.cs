@@ -383,6 +383,15 @@ namespace RhinoMocksExamples
         }
 
         [Test]
+        public void If_you_set_a_property_on_a_mock_the_property_getter_will_not_return_the_value_you_set()
+        {
+            var mock = MockRepository.GenerateMock<ISampleClass>();
+
+            mock.Property = "foo";
+            mock.Property.ShouldBeNull();
+        }
+
+        [Test]
         public void You_can_check_to_see_if_a_property_getter_was_called()
         {
             var mock = MockRepository.GenerateMock<ISampleClass>();
